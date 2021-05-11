@@ -6,15 +6,17 @@ const session = require('express-session');
 require('dotenv').config();
 const bcrypt = require('bcrypt');
 const saltRounds = 10;
-
+const knex = require('knex');
 const app = express();
 
-const pool = new Pool({
-  user: process.env.DB_USER,
-  host: process.env.DB_HOST,
-  database: process.env.DB_NAME,
-  password: process.env.DB_PASSWORD,
-  port: 5432,
+const db = knex({
+  client: 'pg',
+  connection: {
+    user: 'postgres',
+    host: '127.0.0.1',
+    database: 'recipe_db',
+    password: 'sophia100',
+  },
 });
 
 app.use(express.json());
@@ -41,8 +43,41 @@ app.use(
 );
 
 app.get('/', (req, res) => {
-  res.send('working');
+  db.select('*')
+    .from('users')
+    .then((data) => {
+      res.send(data);
+    });
 });
+
+app.post('/register', (req, res) => {
+  bcrypt.hash(req.body.password, saltRounds, function (err, hash) {
+    db.transaction((trx) => {
+      trx
+        .insert({
+          hash: hash,
+          email: req.body.email,
+        })
+        .into('login')
+        .returning('email')
+        .then((loginEmail) => {
+          return db('users')
+            .returning('*')
+            .insert({
+              email: loginEmail[0],
+              joined: new Date(),
+            })
+            .then((user) => {
+              res.json(user[0]);
+            })
+            .catch((err) => res.status(400).json('unable to register'));
+        })
+        .then(trx.commit)
+        .catch(trx.rollback);
+    });
+  });
+});
+
 app.listen(3001, () => {
   console.log('App listening on port 3000');
 });
