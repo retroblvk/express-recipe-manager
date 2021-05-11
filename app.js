@@ -43,6 +43,11 @@ app.use(
 app.get('/', (req, res) => {
   res.send('working');
 });
+
+app.post('/register', (req, res) => {
+  console.log(req.body);
+});
+
 app.listen(3001, () => {
   console.log('App listening on port 3000');
 });
