@@ -73,9 +73,34 @@ app.post('/register', (req, res) => {
             .catch((err) => res.status(400).json('unable to register'));
         })
         .then(trx.commit)
-        .catch(trx.rollback);
+        .catch((err) => {
+          trx.rollback;
+          res.status(400).json('unable to register');
+        });
     });
   });
+});
+
+app.post('/login', (req, res) => {
+  const { password, email } = req.body;
+  db('users')
+    .join('login', 'users.email', '=', 'login.email')
+    .select('users.email', 'login.hash')
+    .where('users.email', email)
+    .then((data) => {
+      bcrypt.compare(req.body.password, data[0].hash, function (err, result) {
+        // result == true
+        console.log(result);
+        if (result) {
+          res.send({ email: data[0].email });
+        } else {
+          res.send({ err: 'Incorrect email, or password' });
+        }
+      });
+    })
+    .catch((err) => {
+      res.send(err);
+    });
 });
 
 app.listen(3001, () => {
