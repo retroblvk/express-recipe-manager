@@ -42,12 +42,25 @@ app.use(
   })
 );
 
-app.get('/', (req, res) => {
-  db.select('*')
-    .from('users')
-    .then((data) => {
-      res.send(data);
-    });
+app.get('/login', (req, res) => {
+  if ('user' in req.session) {
+    db.select('*')
+      .from('users')
+      .where('email', req.session.user.email)
+      .then((data) => {
+        res.send(data);
+      })
+      .catch((err) => {
+        res.send({ message: 'user not logged in' });
+      });
+  } else {
+    res.send({ message: 'user not logged in' });
+  }
+});
+
+app.post('/logout', (req, res) => {
+  req.session.destroy();
+  res.send({ message: 'logged out' });
 });
 
 app.post('/register', (req, res) => {
@@ -92,6 +105,7 @@ app.post('/login', (req, res) => {
         // result == true
         console.log(result);
         if (result) {
+          req.session.user = { email: data[0].email };
           res.send({ email: data[0].email });
         } else {
           res.send({ err: 'Incorrect email, or password' });
